@@ -288,7 +288,36 @@ def check_config() -> None:
         log.warning("PUBLIC_URL is not https; Claude requires HTTPS for remote connectors.")
 
 
+KEEPALIVE_SECONDS = int(os.environ.get("KEEPALIVE_SECONDS", "600"))  # 0 disables; Render sleeps after 15 min idle
+
+
+def keepalive_loop(url: str, interval: int, sleep=time.sleep, get=None) -> None:
+    """Ping our own public URL so Render sees inbound traffic and keeps the free instance awake."""
+    get = get or httpx.get
+    while True:
+        sleep(interval)
+        try:
+            r = get(url, timeout=30)
+            log.info("keepalive %s -> %s", url, r.status_code)
+        except Exception as e:  # never let the pinger die
+            log.warning("keepalive failed: %s", e)
+
+
+def start_keepalive() -> None:
+    import threading
+    if KEEPALIVE_SECONDS <= 0:
+        log.info("Keep-alive disabled")
+        return
+    if not PUBLIC_URL.startswith("https://"):
+        log.info("Keep-alive skipped (PUBLIC_URL is not a public https URL)")
+        return
+    threading.Thread(target=keepalive_loop, args=(f"{PUBLIC_URL}/healthz", KEEPALIVE_SECONDS),
+                     daemon=True, name="keepalive").start()
+    log.info("Keep-alive started: pinging %s/healthz every %ss", PUBLIC_URL, KEEPALIVE_SECONDS)
+
+
 if __name__ == "__main__":
     check_config()
+    start_keepalive()
     log.info("MCP endpoint: %s/mcp   Spotify redirect URI to register: %s", PUBLIC_URL, callback_url())
     mcp.run(transport="streamable-http")
