@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: spotify-mcp
+    runtime: python
+    plan: free            # free sleeps after ~15 min idle (first call is slow); use "starter" for always-on
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SECRET_KEY
+        generateValue: true     # encrypts all login tokens; do not change after connecting
+      - key: SPOTIFY_CLIENT_ID
+        sync: false             # you paste this in the Render dashboard
+      - key: ALLOWED_SPOTIFY_USER_IDS
+        sync: false             # your Spotify user id (recommended), comma separated
