@@ -71,6 +71,7 @@ SPOTIFY_SCOPES = " ".join([
     "playlist-read-private", "playlist-read-collaborative",
     "playlist-modify-public", "playlist-modify-private",
     "user-follow-read", "user-follow-modify",
+    "ugc-image-upload",
 ])
 ACCESS_TTL = 3600
 REFRESH_TTL = 60 * 24 * 3600

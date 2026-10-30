@@ -1,8 +1,8 @@
 # Spotify MCP (hosted on Render)
 
-Control your Spotify from Claude, ChatGPT, and Grok: playback, queue, playlists,
-library, follows, top items, history. About 36 tools. No database; logins are encrypted
-blobs, so restarts never sign you out.
+Control your Spotify from Claude, ChatGPT, and Grok: playback, search, artist and album
+catalog, podcasts, audiobooks, playlists, discovery, library, follows, and listening
+history. No database; logins are encrypted blobs, so restarts never sign you out.
 
 ## Deploy
 
@@ -28,6 +28,11 @@ env var to it exactly (https, no trailing slash).
 - Free Render services sleep when idle. The first request after a sleep takes about 30-60 s;
   if the connector times out, just retry. `starter` plan keeps it awake.
 - Playback commands need an active Spotify device (open the Spotify app once).
+- New connections request library access for tracks, albums, shows, episodes, and audiobooks;
+   playlist edits and cover uploads require playlist permissions and `ugc-image-upload`.
+   Reconnect the connector after deploying scope changes so Spotify can grant the new permissions.
+- Spotify may restrict recommendations, related artists, and audio analysis/features for some apps;
+   those tools return Spotify's error rather than failing the server.
 - Revoke access any time: Spotify account > Apps > remove. Changing `SECRET_KEY` logs out all clients.
 - Spotify may restrict some Web API endpoints for development-mode apps. Errors are returned
   to the AI client as text rather than crashing.

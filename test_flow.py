@@ -17,7 +17,7 @@ def fake_response(status, data, url="https://x"):
 
 
 def spotify_sync(method, url, **kw):
-    CALLS.append((method, url, kw.get("json")))
+    CALLS.append((method, url, kw.get("json"), kw.get("params"), kw.get("content")))
     if url.endswith("/me/playlists"):
         return fake_response(200, {"items": [{"name": "BEST FOR ME", "id": "PL1", "uri": "spotify:playlist:PL1",
                                               "owner": {"display_name": "Zohaib"}, "public": False}]})
@@ -101,7 +101,9 @@ with TestClient(A.mcp.streamable_http_app(), base_url="https://example.onrender.
                                     "scope": "spotify"})
     loc = r.headers.get("location", "")
     ok(r.status_code == 302 and "accounts.spotify.com/authorize" in loc, "authorize redirects to Spotify login")
-    sp_state = urllib.parse.parse_qs(urllib.parse.urlparse(loc).query)["state"][0]
+    spotify_params = urllib.parse.parse_qs(urllib.parse.urlparse(loc).query)
+    ok("ugc-image-upload" in spotify_params["scope"][0].split(), "Spotify consent includes playlist cover upload scope")
+    sp_state = spotify_params["state"][0]
 
     r = c.get("/spotify/callback", params={"code": "SPCODE", "state": sp_state})
     loc = r.headers.get("location", "")
@@ -132,7 +134,28 @@ with TestClient(A.mcp.streamable_http_app(), base_url="https://example.onrender.
 
     r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     names = [t["name"] for t in r.json()["result"]["tools"]]
-    ok(len(names) >= 30 and "play_random_from_playlist" in names, f"tools/list returns {len(names)} tools")
+    expected_tools = {
+        "get_artist", "get_album", "get_track", "get_show", "get_episode", "get_audiobook",
+        "get_saved_shows", "get_saved_episodes", "get_saved_audiobooks", "get_playlist",
+        "reorder_playlist_tracks", "replace_playlist_tracks", "set_playlist_cover",
+        "get_playlist_cover", "get_new_releases", "get_category", "get_recommendations",
+        "get_track_audio_analysis", "check_saved_tracks", "check_followed_artists",
+    }
+    ok(len(names) >= 80 and expected_tools.issubset(names),
+       f"tools/list returns {len(names)} tools including all added feature groups")
+
+    r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {
+        "name": "get_artists", "arguments": {"artists": ["https://open.spotify.com/intl-us/artist/ART1?si=test"]}}})
+    artist_calls = [call for call in CALLS if call[1].endswith("/artists")]
+    ok(not r.json()["result"].get("isError") and artist_calls[-1][3]["ids"] == "ART1",
+       "catalog tools normalize Spotify URLs to IDs")
+
+    encoded_cover = base64.b64encode(b"\xff\xd8\xfftest").decode()
+    r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {
+        "name": "set_playlist_cover", "arguments": {"playlist": "PL1", "image_base64": encoded_cover}}})
+    cover_calls = [call for call in CALLS if call[1].endswith("/playlists/PL1/images") and call[0] == "PUT"]
+    ok(not r.json()["result"].get("isError") and cover_calls[-1][4] == encoded_cover,
+       "playlist cover uploads send base64-encoded JPEG data")
 
     r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
         "name": "play_random_from_playlist", "arguments": {"playlist": "spotify:playlist:PL1", "count": 4}}})
@@ -144,5 +167,9 @@ with TestClient(A.mcp.streamable_http_app(), base_url="https://example.onrender.
     r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {
         "name": "delete_playlist", "arguments": {"playlist": "PL1"}}})
     ok("confirm=True" in r.text, "delete_playlist refuses without confirm")
+
+    r = c.post("/mcp", headers=AH, json={"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {
+        "name": "replace_playlist_tracks", "arguments": {"playlist": "PL1", "uris": ["spotify:track:T1"]}}})
+    ok("confirm=True" in r.text, "replace_playlist_tracks refuses without confirm")
 
 print("ALL TESTS PASSED")
