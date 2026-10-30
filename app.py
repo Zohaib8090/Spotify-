@@ -57,6 +57,7 @@ ALLOWED_REDIRECTS = {u.strip() for u in os.environ.get(
     "https://chatgpt.com/api/mcp/auth_callback,"
     "https://chat.openai.com/api/mcp/auth_callback,"
     "https://grok.com/api/mcp/auth_callback,"
+    "https://grok.com/connectors-oauth-exchange-code/,"
     "https://x.ai/api/mcp/auth_callback",
 ).split(",") if u.strip()}
 LOOPBACK = re.compile(r"^http://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(/|$)")

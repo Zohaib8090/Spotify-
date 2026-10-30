@@ -67,6 +67,7 @@ SUPPORTED_REDIRECTS = [
     "https://chatgpt.com/api/mcp/auth_callback",
     "https://chat.openai.com/api/mcp/auth_callback",
     "https://grok.com/api/mcp/auth_callback",
+    "https://grok.com/connectors-oauth-exchange-code/",
     "https://x.ai/api/mcp/auth_callback",
 ]
 verifier = secrets.token_urlsafe(64)
