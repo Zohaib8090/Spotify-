@@ -1,7 +1,7 @@
 """
 Hosted Spotify MCP server (for Render / any HTTPS host).
 
-Claude (web, desktop, mobile) connects to  https://<your-service>/mcp  as a custom connector.
+Claude, ChatGPT, and Grok connect to https://<your-service>/mcp as custom connectors.
 This server acts as its own OAuth authorization server, and delegates the actual login to
 Spotify. It keeps NO database: every token and code is an encrypted, signed blob (Fernet),
 so restarts and free-tier spin-downs never log you out.
@@ -52,7 +52,12 @@ FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256(_secret.encode()).digest
 ALLOWED_USERS = {u.strip() for u in os.environ.get("ALLOWED_SPOTIFY_USER_IDS", "").split(",") if u.strip()}
 ALLOWED_REDIRECTS = {u.strip() for u in os.environ.get(
     "ALLOWED_REDIRECTS",
-    "https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback",
+    "https://claude.ai/api/mcp/auth_callback,"
+    "https://claude.com/api/mcp/auth_callback,"
+    "https://chatgpt.com/api/mcp/auth_callback,"
+    "https://chat.openai.com/api/mcp/auth_callback,"
+    "https://grok.com/api/mcp/auth_callback,"
+    "https://x.ai/api/mcp/auth_callback",
 ).split(",") if u.strip()}
 LOOPBACK = re.compile(r"^http://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(/|$)")
 

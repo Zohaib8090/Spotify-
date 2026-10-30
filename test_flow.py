@@ -61,9 +61,22 @@ def ok(cond, msg):
 
 
 REDIRECT = "https://claude.ai/api/mcp/auth_callback"
+SUPPORTED_REDIRECTS = [
+    REDIRECT,
+    "https://claude.com/api/mcp/auth_callback",
+    "https://chatgpt.com/api/mcp/auth_callback",
+    "https://chat.openai.com/api/mcp/auth_callback",
+    "https://grok.com/api/mcp/auth_callback",
+    "https://x.ai/api/mcp/auth_callback",
+]
 verifier = secrets.token_urlsafe(64)
 challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
 H = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
+
+for redirect in SUPPORTED_REDIRECTS:
+    client = A.OpenClient(client_id="s", redirect_uris=[A.AnyUrl(redirect)], token_endpoint_auth_method="none",
+                          grant_types=["authorization_code", "refresh_token"], response_types=["code"], scope=A.SCOPE)
+    ok(client.validate_redirect_uri(redirect) == redirect, f"{redirect} is accepted as a valid OAuth redirect")
 
 with TestClient(A.mcp.streamable_http_app(), base_url="https://example.onrender.com", follow_redirects=False) as c:
     r = c.get("/.well-known/oauth-authorization-server")
